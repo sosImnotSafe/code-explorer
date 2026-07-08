@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turn Agreement Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F6F3;
+  --surface:#FFFFFF;
+  --surface-2:#FBFBF9;
+  --ink:#1B1E22;
+  --ink-soft:#3A3E3B;
+  --ink-muted:#71766D;
+  --ink-faint:#9EA299;
+  --line:#E2E4DC;
+  --line-soft:#EDEEE8;
+  --accent:#2F5D62;
+  --accent-ink:#1E3F42;
+  --accent-soft:#E3EDEC;
+  --accent-soft-2:#CFE1DF;
+  --warn:#A23B3B;
+  --warn-soft:#F5E7E5;
+  --good:#3D6E52;
+  --good-soft:#E6EFE8;
+  --amber:#B08B2A;
+  --amber-soft:#F3ECD9;
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:18px;
+  --shadow-card:0 1px 2px rgba(27,30,34,0.04), 0 6px 16px rgba(27,30,34,0.05);
+  --shadow-pop:0 8px 24px rgba(27,30,34,0.12), 0 2px 6px rgba(27,30,34,0.08);
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'Inter', -apple-system, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+
+  --fam-unknown:#93958D;
+  --fam-attitude:#6B4C9A;
+  --fam-evidence:#2F5D62;
+  --fam-extra:#71766D;
+  --fam-fallacy:#A23B3B;
+  --fam-future:#3D6E8C;
+  --fam-invoke:#9C5A8C;
+  --fam-lack:#5B6350;
+  --fam-signal:#B08B2A;
+  --fam-theme:#8C4A3D;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--accent-soft-2); }
+
+.app{ display:flex; flex-direction:column; height:100vh; }
+
+/* ---------- Topbar ---------- */
+.topbar{
+  display:flex; align-items:baseline; justify-content:space-between;
+  padding:22px 32px 18px; border-bottom:1px solid var(--line);
+  flex-shrink:0; gap:24px;
+}
+.topbar-left{ display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; }
+.topbar h1{
+  font-family:var(--font-display); font-weight:600; font-size:23px;
+  letter-spacing:-0.01em; margin:0; color:var(--ink);
+}
+.topbar .subtitle{ font-size:13px; color:var(--ink-muted); font-style:italic; font-family:var(--font-display); }
+.topbar-stats{
+  display:flex; gap:22px; align-items:center;
+  font-family:var(--font-mono); font-size:12.5px; color:var(--ink-muted); flex-shrink:0;
+}
+.topbar-stats b{ color:var(--accent-ink); font-weight:600; }
+.topbar-stats .divider{ width:1px; height:18px; background:var(--line); }
+.topbar-stats .match-rate{ color:var(--good); font-weight:600; }
+.filters-toggle{
+  display:none; align-items:center; gap:6px; background:var(--accent); color:#fff;
+  border:none; padding:8px 14px; border-radius:20px; font-family:var(--font-body);
+  font-weight:600; font-size:13px; cursor:pointer;
+}
+
+/* ---------- Layout split ---------- */
+.layout{ flex:1; display:flex; min-height:0; }
+.feed{ flex:1; overflow-y:auto; padding:26px 28px 80px; min-width:0; }
+.feed-empty{ text-align:center; padding:80px 20px; color:var(--ink-muted); }
+.feed-empty .glyph{ font-family:var(--font-display); font-size:40px; color:var(--ink-faint); margin-bottom:10px; }
+.filters{
+  width:370px; flex-shrink:0; border-left:1px solid var(--line);
+  background:var(--surface-2); overflow-y:auto; padding:22px 22px 60px;
+}
+.feed::-webkit-scrollbar, .filters::-webkit-scrollbar{ width:9px; }
+.feed::-webkit-scrollbar-thumb, .filters::-webkit-scrollbar-thumb{ background:#D8DAD1; border-radius:20px; }
+.feed::-webkit-scrollbar-track, .filters::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- Filter sections ---------- */
+.filter-section{ margin-bottom:22px; padding-bottom:20px; border-bottom:1px solid var(--line-soft); }
+.filter-section:last-child{ border-bottom:none; }
+.filter-section-title{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.09em; text-transform:uppercase;
+  color:var(--ink-muted); margin:0 0 12px; display:flex; align-items:center; justify-content:space-between;
+}
+.filter-section-title .reset-link{
+  font-family:var(--font-body); text-transform:none; letter-spacing:0; color:var(--accent);
+  cursor:pointer; font-size:12px; font-weight:600;
+}
+.filter-section-title .reset-link:hover{ text-decoration:underline; }
+
+.search-box{ position:relative; }
+.search-box input{
+  width:100%; padding:10px 12px 10px 34px; border:1px solid var(--line); border-radius:var(--radius-md);
+  background:var(--surface); font-family:var(--font-body); font-size:13.5px; color:var(--ink); outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.search-box input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+.search-box svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--ink-faint); }
+
+/* ---------- Segmented control (agreement toggle) ---------- */
+.segmented{ display:flex; border:1.5px solid var(--line); border-radius:20px; overflow:hidden; }
+.segmented .seg{
+  flex:1; text-align:center; padding:7px 8px; font-size:12.5px; font-weight:600; color:var(--ink-muted);
+  cursor:pointer; transition:all .12s; font-family:var(--font-mono);
+}
+.segmented .seg + .seg{ border-left:1.5px solid var(--line); }
+.segmented .seg.active{ background:var(--accent); color:#fff; }
+.segmented .seg.active.mismatch{ background:var(--warn); }
+
+/* ---------- Range slider (reused) ---------- */
+.range-block{ margin-bottom:18px; }
+.range-block:last-child{ margin-bottom:0; }
+.range-label-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+.range-label{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+.range-values{
+  font-family:var(--font-mono); font-size:12px; color:var(--accent-ink); font-weight:500;
+  background:var(--accent-soft); padding:2px 8px; border-radius:6px;
+}
+.dual-slider{ position:relative; height:28px; margin:0 3px; }
+.dual-slider .track{ position:absolute; top:50%; left:0; right:0; height:4px; transform:translateY(-50%); background:var(--line); border-radius:4px; }
+.dual-slider .fill{ position:absolute; top:50%; height:4px; transform:translateY(-50%); background:var(--accent); border-radius:4px; }
+.dual-slider .thumb{
+  position:absolute; top:50%; width:16px; height:16px; margin-left:-8px; transform:translateY(-50%);
+  background:#fff; border:2.5px solid var(--accent); border-radius:50%; cursor:grab;
+  box-shadow:0 1px 3px rgba(27,30,34,0.25); touch-action:none;
+}
+.dual-slider .thumb:active{ cursor:grabbing; transform:translateY(-50%) scale(1.12); }
+.dual-slider .thumb:focus-visible{ outline:2px solid var(--accent-ink); outline-offset:2px; }
+
+/* ---------- Stats summary ---------- */
+.stats-table{ width:100%; border-collapse:collapse; font-size:12px; }
+.stats-table th{
+  text-align:left; font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+  letter-spacing:0.05em; color:var(--ink-faint); font-weight:600; padding:4px 6px; border-bottom:1px solid var(--line);
+}
+.stats-table td{ padding:6px 6px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); }
+.stats-table td.fam-name{ font-family:var(--font-body); font-weight:600; color:var(--ink); }
+.stats-table tr:last-child td{ border-bottom:none; }
+.stats-overall{
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;
+}
+.stat-box{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+  padding:10px 12px;
+}
+.stat-box .v{ font-family:var(--font-mono); font-size:19px; font-weight:600; color:var(--accent-ink); }
+.stat-box .l{ font-size:10.5px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.04em; margin-top:2px; }
+.f1-bar{ height:5px; border-radius:3px; background:var(--line-soft); overflow:hidden; margin-top:3px; }
+.f1-bar-fill{ height:100%; background:var(--accent); }
+
+/* ---------- Family accordion & chips (reused) ---------- */
+.expand-all-row{ display:flex; gap:14px; margin-bottom:10px; font-size:12px; font-weight:600; color:var(--accent); cursor:pointer; }
+.expand-all-row span:hover{ text-decoration:underline; }
+.family-group{ border:1px solid var(--line); border-radius:var(--radius-md); margin-bottom:8px; overflow:hidden; background:var(--surface); }
+.family-header{ display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; user-select:none; }
+.family-header .dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.family-header .name{ font-weight:600; font-size:13.5px; flex:1; color:var(--ink); }
+.family-header .count{ font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); }
+.family-header .chevron{ color:var(--ink-faint); transition:transform .15s; flex-shrink:0; }
+.family-group.open .chevron{ transform:rotate(90deg); }
+.family-body{ display:none; padding:2px 12px 12px; flex-wrap:wrap; gap:6px; }
+.family-group.open .family-body{ display:flex; }
+.code-chip{
+  display:inline-flex; align-items:center; gap:5px; padding:5px 9px 5px 8px; border-radius:16px;
+  border:1.5px solid var(--line); background:var(--surface); font-family:var(--font-mono); font-size:11.5px;
+  color:var(--ink-soft); cursor:pointer; transition:all .12s; line-height:1.3;
+}
+.code-chip:hover{ border-color:var(--chip-color, var(--accent)); }
+.code-chip.mode-and{ background:var(--chip-color); border-color:var(--chip-color); color:#fff; }
+.code-chip.mode-not{ background:var(--warn-soft); border-color:var(--warn); color:var(--warn); text-decoration:line-through; text-decoration-thickness:1.5px; }
+.code-chip.chip-highlight{ box-shadow:0 0 0 3px var(--chip-color) inset, 0 0 0 3px var(--chip-color); transform:scale(1.05); }
+
+/* ---------- Query builder (reused) ---------- */
+.query-builder{ margin-bottom:14px; }
+.query-empty-hint{ font-size:12px; color:var(--ink-faint); font-style:italic; padding:10px 12px; border:1px dashed var(--line); border-radius:var(--radius-md); margin-bottom:10px; }
+.query-connector-and{ text-align:center; font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:var(--ink-muted); letter-spacing:0.08em; margin:4px 0; cursor:pointer; padding:2px; border-radius:4px; }
+.query-connector-and:hover{ background:var(--accent-soft); color:var(--accent-ink); }
+.query-group{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:9px 10px; border:1.5px solid var(--line); border-radius:var(--radius-md); background:var(--surface); margin-bottom:2px; }
+.query-connector-or{ font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--ink-faint); letter-spacing:0.06em; cursor:pointer; padding:1px 3px; border-radius:4px; }
+.query-connector-or:hover{ background:var(--amber-soft); color:var(--amber); }
+.query-entry{ display:inline-flex; align-items:center; gap:4px; padding:4px 6px 4px 10px; border-radius:14px; background:var(--chip-color); color:#fff; font-family:var(--font-mono); font-size:11.5px; }
+.query-entry.negated{ background:#fff; border:1.5px solid var(--warn); color:var(--warn); }
+.query-entry-label{ cursor:pointer; }
+.query-entry-label:hover{ text-decoration:underline; }
+.query-entry-remove{ cursor:pointer; opacity:0.75; font-size:14px; line-height:1; padding:0 3px; }
+.query-entry-remove:hover{ opacity:1; }
+.query-group-remove{ margin-left:auto; font-size:10.5px; color:var(--ink-faint); cursor:pointer; white-space:nowrap; }
+.query-group-remove:hover{ color:var(--warn); text-decoration:underline; }
+.query-add-group-btn{ text-align:center; padding:8px; border:1.5px dashed var(--accent); border-radius:var(--radius-md); color:var(--accent); font-size:12.5px; font-weight:600; cursor:pointer; margin-top:6px; }
+.query-add-group-btn:hover{ background:var(--accent-soft); }
+
+/* ---------- Conversation cards ---------- */
+.conversation-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
+  margin-bottom:18px; box-shadow:var(--shadow-card); overflow:hidden;
+}
+.card-header{
+  display:flex; align-items:center; gap:16px; padding:14px 20px; background:var(--surface-2);
+  border-bottom:1px solid var(--line-soft); flex-wrap:wrap;
+}
+.card-header .tag{ font-family:var(--font-mono); font-size:11.5px; color:var(--ink-muted); display:flex; align-items:center; gap:5px; }
+.card-header .tag b{ color:var(--ink); font-weight:600; }
+.model-badge{
+  font-family:var(--font-mono); font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:12px;
+  background:var(--accent-soft); color:var(--accent-ink);
+}
+.coder-badge{
+  font-family:var(--font-mono); font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:12px;
+  background:var(--amber-soft); color:var(--amber);
+}
+.conv-match-chip{
+  margin-left:auto; font-family:var(--font-mono); font-size:11px; font-weight:600; padding:4px 10px; border-radius:12px;
+}
+.conv-match-chip.full{ background:var(--good-soft); color:var(--good); }
+.conv-match-chip.partial{ background:var(--amber-soft); color:var(--amber); }
+.conv-match-chip.none{ background:var(--warn-soft); color:var(--warn); }
+
+.turns{ padding:6px 20px 18px; }
+.turn-row{ padding:16px 0; position:relative; }
+.turn-row:not(:last-child){ border-bottom:1px solid var(--line-soft); }
+.turn-row.dimmed{ opacity:0.38; }
+.turn-row.dimmed .turn-text{ color:var(--ink-muted); }
+.turn-top{ display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.turn-marker{
+  flex-shrink:0; width:27px; height:27px; border-radius:50%; background:var(--surface-2);
+  border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--ink-muted); margin-top:2px;
+}
+.turn-text{ font-size:14.5px; line-height:1.65; color:var(--ink); margin:0; flex:1; }
+.turn-match-badge{
+  flex-shrink:0; font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:0.03em;
+  padding:3px 9px; border-radius:10px; text-transform:uppercase; white-space:nowrap;
+}
+.turn-match-badge.match{ background:var(--good-soft); color:var(--good); }
+.turn-match-badge.mismatch{ background:var(--warn-soft); color:var(--warn); }
+
+.compare-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-left:39px; }
+.compare-col{ border-radius:var(--radius-md); padding:9px 10px; min-height:44px; }
+.compare-col.col-human{ background:var(--surface-2); border:1.5px solid var(--line); }
+.compare-col.col-both{ background:var(--accent-soft); border:1.5px solid var(--accent-soft-2); }
+.compare-col.col-llm{ background:var(--amber-soft); border:1.5px solid #E7D9AC; }
+.compare-col-label{
+  font-family:var(--font-mono); font-size:9.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--ink-muted); margin-bottom:7px; display:flex; justify-content:space-between;
+}
+.compare-col.col-both .compare-col-label{ color:var(--accent-ink); }
+.compare-col.col-llm .compare-col-label{ color:var(--amber); }
+.compare-chips{ display:flex; flex-wrap:wrap; gap:5px; }
+.turn-code-chip{
+  display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:11px;
+  font-family:var(--font-mono); font-size:10px; font-weight:500;
+  background:var(--chip-bg); color:var(--chip-fg); border:1px solid var(--chip-border);
+  transition:box-shadow .15s, transform .15s;
+}
+.turn-code-chip .fam{ opacity:0.65; }
+.turn-code-chip.chip-highlight{ box-shadow:0 0 0 2px var(--chip-fg); transform:translateY(-1px); }
+.compare-empty{ font-size:11px; color:var(--ink-faint); font-style:italic; }
+
+@media (max-width: 900px){
+  .layout{ position:relative; }
+  .filters{
+    position:fixed; top:0; right:0; bottom:0; width:88vw; max-width:390px; z-index:50;
+    box-shadow:var(--shadow-pop); transform:translateX(100%); transition:transform .22s ease;
+  }
+  .filters.open{ transform:translateX(0); }
+  .filters-toggle{ display:flex; }
+  .filters-scrim{ display:none; position:fixed; inset:0; background:rgba(27,30,34,0.35); z-index:40; }
+  .filters-scrim.open{ display:block; }
+  .topbar-stats{ display:none; }
+  .feed{ padding:18px 16px 80px; }
+  .topbar{ padding:16px 16px 14px; }
+  .compare-grid{ grid-template-columns:1fr; margin-left:0; margin-top:10px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1>Turn Agreement Explorer</h1>
+      <span class="subtitle">LLM vs. human coding comparison</span>
+    </div>
+    <div class="topbar-stats" id="statsBar"></div>
+    <button class="filters-toggle" id="filtersToggleBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      Filters
+    </button>
+  </header>
+
+  <div class="layout">
+    <main class="feed" id="feed"></main>
+    <div class="filters-scrim" id="filtersScrim"></div>
+    <aside class="filters" id="filters"></aside>
+  </div>
+</div>
+
+<script id="app-data" type="application/json">{"conversations":[{"sample_number":5,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"Society is completely made up and once we die we realize that everything on Earth has been a figment of our imagination. There is plenty of evidence on the internet that suggests this theory is actually a fact. Plenty of people who have crossed over have said there is a God, no such thing as death and how the passage of time is completely different than how it is here on Earth.","human_only":[],"both":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":2,"text":"You are entitled to your opinion but nothing said is going to change my mind or change the fact that I am correct. Society IS made up. There is no such thing as death.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":3,"text":"Yes, you and no one can change my beliefs. I really have no care or concern about how anyone feels about my beliefs being untrue or the belief in the complete opposite. I know what I have read, been through personally and seen with my own eyes. I refuse to take life at face value. Anyone who does not agree is more than welcome to live their life as they so please. I have no interest in hearing about their views or how they feel about the subject matter at all since it will never change my own nor the facts.","human_only":[],"both":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[],"match":true,"human_count":2,"llm_count":2},{"turn_number":4,"text":"Yeah, no problem. I enjoyed listening to your perspective as well.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":9,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I think that the government reverse engineers alien technologies. It seems like we make amazing leaps in tech very quickly. It just seems odd that we make these jumps as quickly as we do within the last 100 years. Fiber optics are one of them. Night vision is another tech I think we reversed engineered, as well as stealth on the stealth bombers.","human_only":[],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Science","family":"THEME","sub":"Science"},{"code":"THEME-Space","family":"THEME","sub":"Space"}],"llm_only":[],"match":true,"human_count":4,"llm_count":4},{"turn_number":2,"text":"I think it's good to see these viewpoints as well. It's good to see them described in a way that is actually verifiable, rather than something I've learned through a different source about reverse engineering. It makes me want to look into the specifics more closely.","human_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"both":[],"llm_only":[],"match":false,"human_count":2,"llm_count":0},{"turn_number":3,"text":"I've always been interesting in seeing things from multiple viewpoints to form a better picture about them. I never really delved too deeply into the alien conspiracies so you can see how I've had a basic understanding of their side, but a willingness to learn more.","human_only":[],"both":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":4,"text":"Thank you for the information, I will seek out these resources.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":14,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The only conspiracy theories I find somewhat compelling are ones based on small groups of wealthy, powerful people controlling the outcome of major events. So groups like the Trilateral Commission influencing foreign policy, but I don't entirely believe such things. Still, I think it's clear that the wealthy and powerful have a disproportionate influence on what happens in the world. Why does the US have such a large presence in the world, and spend so much taxpayer money on its military, when we have a huge deficit, and hundreds of thousands of homeless Americans who desperately need help? I think it's because a small group of people want it that way, and influence our political leadership accordingly.","human_only":[],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"},{"code":"THEME-Secret Society","family":"THEME","sub":"Secret Society"}],"llm_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"match":false,"human_count":4,"llm_count":6},{"turn_number":2,"text":"Saying that the world is complex isn't much of a refutation of my argument. I think it's pretty clear that people with power have more influence over the democratic system. I don't believe in conspiracies, but I don't have the ability to donate millions of dollars to political candidates, like some people do in the United States.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I agree that we should reform campaign finance, but until we do, I think a small group of wealthy people can have a large influence on our democratic system. This same group also has a lot of control over our popular culture, since they own many of the TV stations, newspapers, and tech companies. I favor grassroots movements, but many of them are successful in spite of the powerful, not because of them. Again, I don't believe in conspiracy theories, but I understand why they are popular, given the influence of a lot of rich people behind the scenes.","human_only":[],"both":[],"llm_only":[{"code":"THEME-Media","family":"THEME","sub":"Media"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"I agree that individuals should be more engaged in our political system, and participate in grassroots movements. In the end, however, it will only be a small minority that will ever bother. But I would like to part of that minority, and get more involved in my local community. It's an election year, so I plan to vote and volunteer!","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":21,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The US is prolonging the war in Ukraine in an effort to find a politically palatable way of enriching defense contractors. I can't say for sure it's true but given the history of the US in foreign wars it's at least plausible. Just looking at say the occupation of Afghanistan and how dishonest the government was to the American people about the likelihood of us succeeding at our publicly stated objectives while spending enormous amounts of money on something we knew wasn't working.","human_only":[],"both":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"llm_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"THEME-Corporation","family":"THEME","sub":"Corporation"}],"match":false,"human_count":5,"llm_count":7},{"turn_number":2,"text":"I'm not sure how much I believe the US truly supports democratic values abroad given its current support for Israel and it's war against Gaza, I think it's likely that is more of a sales pitch than a real goal","human_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"match":false,"human_count":1,"llm_count":1},{"turn_number":3,"text":"Unfortunately I don't think I have much of a way to influence our government at all. I live in a state that is going to vote for a particular party by a large margin no matter what I do and I don't have enough money to personally influence any politicians ------------------------------------------------------------------------------------------","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"I am planning on getting more involved in local politics because as you point out, it's one way to make more of a difference.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":23,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe the 2020 election was stolen. There is plenty of evidence that is ignored or downplayed by the media to suggest that mail-in votes were used to tilt the scales, harvested ballots were used, dead people \"voted\", and any observers who weren't Democrats were kicked out of polling centers. On election night, we were told that counting was going to stop for the night, yet the numbers kept going up after \"the stop\", and coincidentally they all happened to be for Biden. Interestingly the media, big tech, and even the government forbid even talking about it. Any attempt at asking for a recall or at least to look at the results to see if they were on the level was denied across the board.\n\nThat's highly suspicious. Even the campaigning leads one to believe the results are fake.\n\nTrump filled arenas like he was Elvis or the Beatles in their prime, and Biden couldn't fill a high school gym. Biden couldn't get more than a handful of cars to participate in an event where people would drive by to show their support, while Trump supporters were doing boat parades that looked like the navy of a small country was invading. We're supposed to believe that Biden got 81 million votes, even more than Obama? But don't question election integrity when the Democrats win, but if they lose, like Hillary or Stacy Abrams, then it's okay to call an election \"stolen\". I covered the majority of it already. So, I'd just be repeating myself here.","human_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Media","family":"THEME","sub":"Media"}],"match":false,"human_count":6,"llm_count":8},{"turn_number":2,"text":"Let me ask, who programmed you and what are their political leanings?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Definite \"diverse\" in the context of the researchers and developers and give me a precise, by percentage, breakdown of the political leanings of your programmers and that data sources you were trained with.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"List internet sources that you were allowed to train from and sources you were not allowed to train from, specifically news media.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":37,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I'm starting to take the theories that the Coronavirus vaccine caused its share of death and illness now that they have revealed findings that the vaccine was found to have a slight possibility of causing brain and heart complications. It was all in the news the other day. A study revealed that there was a slight chance the vaccine could cause complications such as brain and heart damage.","human_only":[],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[],"match":true,"human_count":3,"llm_count":3},{"turn_number":2,"text":"I hope you are right. I remain skeptical that the vaccine is dangerous, yet we all remember in the early days that of the pandemic when the scientists assured us in regards of that famous conspiracy theory of how it was completely impossible that the virus could in any way originate from the Wuhan lab and look how that turned out.","human_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"both":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[{"code":"THEME-Science","family":"THEME","sub":"Science"}],"match":false,"human_count":3,"llm_count":3},{"turn_number":3,"text":"I doubt the vaccine is dangerous, not out of the possibility, but doubtful that it is dangerous. I think that we can all agree now that the effectiveness of the vaccine was overblown,","human_only":[],"both":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"}],"match":false,"human_count":1,"llm_count":2},{"turn_number":4,"text":"Personally, I think we should hold off on administering more vaccines until we know more about it. If there is even the slightest probability that the virus was genetically engineered as a weapon people should not be putting that in their bodies.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":40,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The conspiracy that the US government knew in advance the plans to hijack planes and destroy the twin towers on 9/11 is credible, the owner of the towers not being present, and taking out massive insurance policies on it is very suspicious. Also the fact the attack was used to justify various geo political moves in the middle east. The owner of the twin towers usually was present there every morning, except for the day of the attack, this was admitted by him in an interview. The facts of what happened in the middle east since 9/11 speak for themselves, and additionally, the fact a tower fell, WTC 7, that was never struck by a plane also heavily influenced me.","human_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"match":false,"human_count":6,"llm_count":6},{"turn_number":2,"text":"There is an emotional aspect you do not possess, a gut feeling that often leads humans to truth. What about that wacky painting that shows George Bush playing with two falling jenga towers? There are people in control that think this kind of thing is funny. They do anything to further their cause. Coincidences can only go so far, or else anything can be explained away as just a mere coincidence. It takes that gut feeling to discern this.","human_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":2,"llm_count":1},{"turn_number":3,"text":"Thank you for agreeing with my on my major points, however distrust of power needs to go further than healthy skepticism. The people currently in power deserve no such respect.\n\nThe country was founded on notions of distrust in power, and we have strayed away from that greatly. The government has more power year after year and these such events are orchestrated to continue that.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"I will continue to analyze each situation, and maybe tone down to healthy skepticism. The issue currently is when the \"legal and democratic\" means are corrupted, and the people in power decide what is legal, and \"democratic\" elections are straight up rigged, or democracy is perverted, and uninformed, stupid voters vote in elections.","human_only":[],"both":[],"llm_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":0,"llm_count":2}]},{"sample_number":47,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe that a few rich and controlling people control our country. A simple and relevant example is our current President. He has very little cognitive ability to make decisions that a President should make so there has to be others behind the scene making them for him. ON a daily basis I see videos of the President not knowing where he is, not knowing who he is with and not being able to speak intelligently.","human_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Elite","family":"THEME","sub":"Elite"}],"both":[{"code":"THEME-Secret Society","family":"THEME","sub":"Secret Society"}],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"match":false,"human_count":3,"llm_count":4},{"turn_number":2,"text":"That all sounds good but I see it several times a day from both liberal and conservative sources. I am old enough to have seen many world leaders and ours is an embarrassment. I have never seen anyone that even comes close. Also, your comments about checks and balances. That all sounds good but when there are no consequences to ignore the laws and check then the behind the scenes people can do anything they want.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":0,"llm_count":2},{"turn_number":3,"text":"You can try to gaslight me all you want but your algorithm is programmed to be very biased. I know what I see and do a lot of research so whatever you try to say, it will not sway me.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":4,"text":"Thank you and I will agree to disagree. I respect that you have your own opinion. I have noting more to say.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":51,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I think there are lots of conspiracy theories which are pretty interesting and I am usually skeptical about all information I consume. The conspiracy theory I find most intriguing is about aliens and area 51. I think theres a lot of compelling evidence Yes, there is a lot of intriguing evidence even said from the government themselves and the topic is overall really mysterious. There are lots of documentaries which are attention hooking and have gotten me a lot more interested in the topic of area 51 and aliens","human_only":[],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Space","family":"THEME","sub":"Space"}],"llm_only":[],"match":true,"human_count":4,"llm_count":4},{"turn_number":2,"text":"Thanks for the analysis. If all the evidence was concrete then it wouldnt be a conspiracy theory anymore. The fact that it is a conspiracy theory is what makes it intriguing, like a mystery waiting to be solved..","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"Thanks for the in depth analysis, I found it valuable. critical thinking is indeed very essential","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you goodbye","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":57,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe in the possibility of some conspiracies, rather than the firm reality of all the theories put out there. for example, I believe there is likely an \"Illuminati\" class making decisions for puppet governments, at times. Just that the idea of money and power being the tools of ultimately a very few at the top of human organizations.","human_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"both":[{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"},{"code":"THEME-Secret Society","family":"THEME","sub":"Secret Society"}],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":3,"llm_count":3},{"turn_number":2,"text":"I think that, as far as news reporting or individual participation in specific causes, the illusion of choice or illusion of actual fact reported can be contained in a range that is acceptable to the illuminati because it is useful in keeping the masses under control.","human_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[],"llm_only":[{"code":"THEME-Media","family":"THEME","sub":"Media"}],"match":false,"human_count":1,"llm_count":1},{"turn_number":3,"text":"As a librarian, I am trained to discern reliable sources of information. I absolutely agree that this is an important skill for people to develop.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"It is annoying to be told how to manage my own career by AI. no me gusta, ------------------------------------------------------------------------------------------","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":60,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"President Kennedy's assassination - I find it plausible that it was a conspiracy on the part of other governments and not just the work of one man I have watched some documentaries that question whether there were other shooters because of the angles. My family had a personal connection to the Kennedy family many years ago and I tend to think that JFK's assassination was part of a my larger plan to disrupt American politics.","human_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"match":false,"human_count":6,"llm_count":8},{"turn_number":2,"text":"I am always open to exploring more information on any topic from reputable sources.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Do those resources include the connections to the Soviets that Lee Harvey Oswald had?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"In this day and age, would we consider him a home-grown terrorist?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":63,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The 2020 election is interesting because Joe Biden was able to dominate in only a small number of bellweather districts. This is an interesting reversal from previous norms where the presidential campaign winner typically won most if not all of those same districts.\n\nWell I described the detail in the previous question but essentially again, there were roughly 20 bellweather counties in which historically the winning candidate typically dominates in. Joe Biden won few, I believe one or two, and Donald Trump won the vast majority","human_only":[{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"llm_only":[{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"match":false,"human_count":3,"llm_count":3},{"turn_number":2,"text":"All of these are good points. Still the fact remains that the changes you mentioned do not necessarily invalidate the predictive ability of those bellweather states. The counties themselves are such that it is not reasonable to assume a drastic shift from previous norms in such a small time frame regardless of the COVID pandemic or demographic shift.\n\nArguably the measures taken during the pandemic could have decreased the ability to detect anomalies due to their intrinsic unique nature.","human_only":[],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":3,"text":"Again these are all good points but all we have available is speculation. These trends could be a result of shifting demographics and the measures taken during the pandemic could have been held under more increased scrutiny but we simply do not know either way.\n\nAll we can really do is point and conjecture","human_only":[],"both":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":4,"text":"Understandable, I appreciate the information you have provided.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":65,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe the Russians are working to control our presidential elections in the United States. I believe it is being done in various ways and they will be successful. I find this compelling because people will make comments about things like they are a joke, but later they come to fruition. As news stories drop I see things that show that is starting to happen. I believe the current immigrant situation in the United States is a part of the plan. They were trying to offer immigrants election rights once they are brought to the US. Daily stories show that this is possibly happening and will continue to happen.","human_only":[],"both":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":3,"llm_count":4},{"turn_number":2,"text":"While I completely agree with many points in this conversation, I also believe that things are being done kind of like behind our backs. There are a lot of laws that are being changed that will make things hard for Americans. Also politicians tend to hide important points and laws in elections that they know many people don't participate in.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"While I understand. I will have to stand by and see what actually happens in the upcoming elections. I do believe there are some things in play to prevent bad things happen but I also believe things get looked over and slid between the cracks.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"I will continue to watch the turn of events and hope for the best for the united states of america at this time.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":73,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"One such conspiracy theory is Martin Luther King and JFK\"s death. There has been constant speculation of the FBI being a part of both It has been said the the CIA held pertinent information to this date that hasn't been release. One theory showed 4 shots being fired for JFK which studies showed there were 2 shooters which wasn't found","human_only":[],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":5,"llm_count":6},{"turn_number":2,"text":"It is very understandable to accept these explanations but I have little trust in our government with the fact of many events and main speculations have been brushed under the rug. Recently we see how our constitution is being attacked and many leaning towards changing it or completely dissolving it. It makes me so sad and concerned that a group of individuals would use fraud to gain votes. I just have little trust in our government because they will find a way to do what they really want to do which questions democracy in our country","human_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"both":[],"llm_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"match":false,"human_count":2,"llm_count":1},{"turn_number":3,"text":"I understand all of these aspects but I still maintain a sense of mistrust. I see that I can become an advocate by being involved and active. Myself as an American that wants democracy and our constitution to reign I must uphold democratic values by advocating for transparency, and demand government accountability.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Engaging is the key to becoming an informed citizen and advocating for change. I can volunteer and become active in my city and state government,","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":74,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"Not that this is anything I particularly care about but for years there was the theory of government coverup when it comes to alternative life forms aka the existence of aliens.\n\nHowever, lately the news has made it evident they are out there or has highly suggested that the thing that has been refuted for decades is out there. I personally do not care enough to pay attention to most conspiracy theories but this is what comes to mind for me.\n\nI have watched a few episodes of unsolved mysteries that covered this very topic among other videos and shows over the course of time. The same evidence seemed to appear but the people who shared their thoughts were considered to be mentally unstable or as hallucinating. I guess I find it compelling because I think it must be horrible to tell the truth for decades and be deemed non-credible for speaking your truth.","human_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Space","family":"THEME","sub":"Space"}],"llm_only":[{"code":"EVIDENCE-Moral Framing","family":"EVIDENCE","sub":"Moral Framing"}],"match":false,"human_count":5,"llm_count":5},{"turn_number":2,"text":"Whereas I can understand your stance, what was the unidentified flying object(s) seen over the course of history that have yet to be publicly identified? I believe that if the government does know something and feel it may threaten our notion of public safety and wellbeing or if they know something and are unsure about it, they will not come out and say it to the public. Not too long ago I saw on the news that there was some sort of alleged alien encounter in Florida in 2023. This was covered worldwide. Whereas I am not going to jump and start thinking everyone I meet could be an alien, I do not think the concept or idea should be ruled out.","human_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"},{"code":"EVIDENCE-Character Based","family":"EVIDENCE","sub":"Character Based"},{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":5,"llm_count":2},{"turn_number":3,"text":"I cannot say I disagree with anything said above.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you will do. It has been nice chatting with you.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":88,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"One I remember is the conspiracy about the murder of JFK being planned by the government.\n\nI think it's a bit compelling because of hidden documents that came to light after the fact. Some alleged evidence is the magic bullet theory, that questioned how one bullet hit jfk and the Texas governor. Also, people believe there is no way Lee Harvey Oswald acted on his own.","human_only":[],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":6,"llm_count":8},{"turn_number":2,"text":"Thanks for the detailed information. I understand you've compiled this information from different sources and that's of value for me.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Can you delve a little bit more into other reasons why people think the government planned jfk's murder?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thanks for the info!","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":89,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The flat earth theory is something I have considered. I read the Bible and believe completely and fully in Jesus Christ. I feel there is evidence in the Bible that could support this theory. The fact that the creation story does not mention the creation of any planets is pretty thought provoking. However, I have seen both sides and cannot really be sure. It is definitely an interesting one! The fact that the creation story in the Bible doesn't talk about the creation of planets, only stars, the moon, and the sun, is pretty good evidence for the flat earth theory. The information about the firmament and things like that also are sort of compelling. I still haven't been convinced it is just interesting to think about.","human_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[{"code":"THEME-Science","family":"THEME","sub":"Science"}],"match":false,"human_count":3,"llm_count":3},{"turn_number":2,"text":"While I do appreciate science, I also believe that the Bible is the word of God. If God wanted to have the writer of the scripture write in a certain way, He could easily do so.\n\nI don't think that the Holy Scriptures of God have to be held back by what people understood at the time. God can do anything and I believe He does and can preserve His word and gave knowledge to the chosen writers so that we could understand His greatness.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Science and scripture can compliment each other. However, they can also greatly differ.\n\nThe theory of evolution and the big bang theory completely go against the story of creation in the Bible. So while I do think that there is some merit to some scientific findings, there are also some great discrepancies. That is why I will always go to the Bible for all truth and understanding and never rely on science fully. In Proverbs it tells us to lean not on our own understanding and to trust in God with all our heart.\n\nTherefore, God's word will surpass any human explanation for me personally.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"I fully agree that God's creation is much more vast and intricate than any human mind can ever comprehend. However, I cannot see any similarities at all in the big bang theory, the evolution theory, and the creation story. I believe that the Bible warns us to be aware of the plans of the enemy to confuse us. Believing in many different theories that are not outlined in the Bible serve no purpose for a true follower of Jesus Christ. Satan is the author of confusion, not God. Multiple theories or stories only serve as a confusion tactic and take away from the beauty of God's creation.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Moral Framing","family":"EVIDENCE","sub":"Moral Framing"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":90,"coder":"Coder_A","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"One conspiracy theory I find to be compelling/credible is the theory about the Royal Family having a hand in Princess Diana's death. I think given all the information that and speculation surrounding the topic, it's hard not to be drawn in and start to see where people are coming from. I think given the timelines, videos, articles, and other pieces of media people have brought up and strung together plays a part in it, as well as the way the British media as well as Kensington Palace have handled it.","human_only":[{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"},{"code":"THEME-Elite","family":"THEME","sub":"Elite"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":6,"llm_count":6},{"turn_number":2,"text":"Could you elaborate on the \"Inquest into Diana's death\"?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Did Diana's death change anything about the British media and their approach to these types of incidents?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"How does Diana's death still have an impact all these years later?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":103,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I think that Jeffrey Epstein was unalive because he had evidence on some of the world's prominent leaders and other famous people. None of them wanted him to start naming names or provide evidence so he was removed. After watching the documentary, I found that some of the events felt off and it appeared that in the beginning, Jeffrey was being protected from his crime. But once some the woman started coming forward it seems like Jeffrey was no longer able to escape his actions.","human_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"both":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Elite","family":"THEME","sub":"Elite"}],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"match":false,"human_count":4,"llm_count":6},{"turn_number":2,"text":"Yes, there are many ways to look at this story, but history has taught us that no one is above approach and if someone has the means they can make you, the evidence, or both disappear.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I'm not saying that everyone gets away with committing crimes, but let's not kid ourselves either and assume that sometimes people with money and power can make things happen if it keeps the limelight off of them.","human_only":[{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"both":[],"llm_only":[],"match":false,"human_count":1,"llm_count":0},{"turn_number":4,"text":"The legal system is beginning to be reformed but we still have a long way to go. Justice needs to be served for everyone involved equally and no one should be above the law.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":104,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The need to create an imbalanced political platform and to show that true supports don't care about the charges against a candidate and will allow them to run for President again, due to the ineptness of the bum that got voted in, Its a fact really not much of a theory.\n\nDonald Trump will become president again and Biden will be charged with more crimes related to covering up for his son using cocaine in the withe house.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"llm_only":[{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":2,"text":"How is the justice system fair? Convicted rapist are allowed to be free after serving little to no time, yet convicted drug dealers spend a full sentence in jail.\n\nThat means a rapist is less of a threat than a drug dealer? GTFO","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"If the principles were followed Hillary would be locked up along with her pervert husband Bill.","human_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"both":[],"llm_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"match":false,"human_count":1,"llm_count":1},{"turn_number":4,"text":"I can agree there needs to be reform, however it needs to be accomplished on all levels with in the Government. So much corruption exists at many levels and is even showing in the small Oklahoma town I live in. The officer assigned to keep the schools safe was arrested for rape. Tell me how anyone can trust and form of government when this happens.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":106,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The cure for cancer has already been discovered but is being held back by a pharmaceutical company in order to market their current offerings. Corporate greed has always been rampant, but especially the past 20 years. We've seen the extent that companies like Ford will go in order to pay less money (choosing to let people sue them vs. replacing exploding cars). With the wealth gap at such a huge amount right now and companies making so much in profits, this conspiracy theory is one that I believe but of course, like most conspiracy theories, have no evidence to back it.","human_only":[],"both":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Corporation","family":"THEME","sub":"Corporation"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"match":false,"human_count":5,"llm_count":6},{"turn_number":2,"text":"I didn't consider those points and I learned a new perspective. Thank you!","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":".","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you!","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":108,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"chemtrails: I find this compelling because why would people spread this in the air to control the weather? It is just very compelling to me to think that there are people in the world going out to put harmful gases, if you will, into the air that we breathe. It's compelling to know that if they are \"chemtrails\" then I am breathing whatever is in a \"chemtrail\" when I see them in the sky. I have no evidence that they are, I have been told by a few people that they are.","human_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"}],"both":[{"code":"EVIDENCE-Moral Framing","family":"EVIDENCE","sub":"Moral Framing"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":4,"llm_count":4},{"turn_number":2,"text":"yes, continue","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"no, that is all","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"thank you","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":114,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The only current conspiracy theory I believe in is the Republican attempt to undermine the government and destroy Democracy. I think there is plenty of evidence for this, Trump has outright stated he wants to be an autocrat if elected. There is a Republican plan in place to overthrow the election results if necessary and implement policies to disrupt Democracy if they win the presidency. There is the Republican plan to disrupt Democratic institutions. Trump plans to replace all civil servants with people loyal to him. He plans to establish concentration camps for illegal immigrants. The list goes on and on.","human_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"both":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"}],"llm_only":[],"match":false,"human_count":4,"llm_count":3},{"turn_number":2,"text":"I am aware of the difficulties in implementing their various plans. One thing that could help them maintaining control of the house, gaining control of the senate and gaining the presidency.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"You mention the judiciary. If the supreme court is stacked with conservative justices following their own agenda and not the law your premise is unsound.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"The fact that these justices are appointed for life gives them license to base decisions on their own ideology and not the law. Alito using a British law about witchcraft to overturn Roe is just one example. And Clarence Thomas being obviously corrupt but appointed for life and able to corrupt the court is another.","human_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"both":[],"llm_only":[{"code":"EVIDENCE-Character Based","family":"EVIDENCE","sub":"Character Based"}],"match":false,"human_count":1,"llm_count":1}]},{"sample_number":116,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The building of the great pyramids, there is no way they were build with the technology available at the time millions of stones some over 20,000 pounds, how were they moved and mined.","human_only":[{"code":"THEME-Science","family":"THEME","sub":"Science"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":3,"llm_count":3},{"turn_number":2,"text":"how were the sides of the pyramids oriented within less than a degree","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"how did this apply to the stars in Orion","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you for this discussion it was very informative","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":118,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"JFK was part of a plan by the government. JFK's death was planned all along by people from the CIA. It was part of a conspiracy.","human_only":[],"both":[{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":3,"llm_count":4},{"turn_number":2,"text":"There was a second shoorter on the grassy knoll. He was part of the CIA.. He escaped.\n\nThere is evidence of him.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"There may or may not have been a second shooter. There is no conclusive evidence so I err on the side of caution and say there was a second shooter.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"In the end, there is no conclusive proof either way.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":133,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"Climate change is fake. I do not believe in it at all. Climate change is nothing new. I 100% believe in weather modification, as it has been proven if people do actual research.\n\nI do not trust anything or anyone. I go with my instinct and gut, so if something doesn't sound right to me, then I go with it. I've also seen enough videos talking about weather modification from government officials, Disney, etc.","human_only":[],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[],"match":true,"human_count":3,"llm_count":3},{"turn_number":2,"text":"That is not cloud seeding, but chemtrails are sprayed on people daily. Operation Popeye was also used in Vietnam. I do not trust NASA or any scientist, especially when they can be bought and paid for.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"match":false,"human_count":1,"llm_count":2},{"turn_number":3,"text":"I appreciate your input, but the only misinformation comes from you and mainstream media.\n\nI was raised by my parents and also in school to ask, who, what, when, where, why, and how. This seems to be something not learned today. You speak of critical thinking as if that is bad. Scientists are based on theories and opinions which can be debunked, changed, and challenged. Who is anyone to decide what is\n\nmisinformation to ME? That is pretty one-sided to tell me who to trust and what is misinformation. That is for me to decide and no one else.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"You keep speaking of scientists and their \"proven\" facts about climate change when there are other scientists just as educated and reputable who do not believe in it. So again, one-sided information. If you or whoever were truly honest, you would give both sides of the information and let people decide without trying to encourage them to the side with an agenda. Thank you for your time.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":142,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I don't know if this counts as a conspiracy theory, but I believe the Mandella Effect is compelling. The reason I believe the theory to be compelling is because I feel like some things that are remembered one way, are different in reality. I noticed a lot of these things trending on Twitter, such as the book, \"The Berenstein Bears\" actually being spelled as \"The Berenstain Bears. I used to read these books all the time as a kid and I always remembered the 'e' instead of 'a' in Berenstain. This is just one example, but each time one of these things trended, I found many others with different memories than what is \"real.\" Well, another piece of evidence was on a Twitter thread I saw about another thing that a lot of the world apparently \"misremembered.\" It was the logo for Fruit of the Loom.\n\nMany people on social media, and even I , myself, remember Fruit of the Loom clothing having a cornucopia behind the fruit on the logo. According to Fruit of the Loom, anything that had the cornucopia in the logo was fake. People were posting pictures of their clothes with the cornucopia in the logo, and I refuse to believe so many people bought fake Fruit of the Loom.","human_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"}],"both":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":4,"llm_count":5},{"turn_number":2,"text":"Thank you for the explanation; it cleared up many reasons why the Mandella Effect is so mysterious and scary. The human brain really is susceptible to misremembering. Now that I think about it, there have been times when I reminisce on memories with my siblings, and we all end up remembering details differently. This made me realize to record important moments that I want to remember for a long time, because our memories end up different.\n\nRegarding the fake logo images being altered; Is it really possible to make the logos look exactly how we thought it looked? Altered images usually aren't so tough to see through, but the images of people's shirts with logos and the books with different spelling looked real.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"This is making me want to do some research on image manipulation, and even AI art. The evolution of AI in art is starting to make it harder to tell when an image was actually drawn/painted by a person, or if it was just made by AI tools. I am also curious about other conspiracy theories and how they can be analyzed more logically like you've done.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you for the resources for researching both AI art and conspiracy theories. I wouldn't have known where to start my research, so I will be bookmarking this list for later. I think YouTube is a good source for videos about logical fallacies and cognitive biases, so I will probably watch videos there to learn about that. I will use properly sourced research from credible people when I search about the AI stuff, so I have less chance to be tricked.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":143,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"There is a conspiracy theory that Russian assets supported the candidacy of Donald Trump in 2016 on social media, supporting and establishing his legitimacy and ultimately helping him win the presidency. Not only was I able to see the types of social media that came out during this time, but as an American, this affected 4 years of my life. In a manner of speaking, this presidency and the cult of personality solidified through it are still being felt 8 years later. I think a big part of why this is compelling is because of these ripple effects. The social media posts, especially on 4CHAN and Reddit, began at a similar time. In many cases, they referenced each other across platforms. Subreddits were created and saw incredible growth. Seeing this overnight success, plus learning of all the (more conspiracy-leaning) Russian and other international ties that the Trump family have, have made this theory compelling.","human_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"both":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"},{"code":"THEME-Media","family":"THEME","sub":"Media"}],"match":false,"human_count":3,"llm_count":5},{"turn_number":2,"text":"Has there been an upward trend of Russian hacking since 2015? It feels like there have been more hacking stories in the news since then. Perhaps that would support the interference theory.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":0,"llm_count":3},{"turn_number":3,"text":"Is comparing the fairness of Russia's elections to Trump's unwillingness to admit defeat in the 2020 Presidential Election an unfair conclusion to draw?","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"Thank you for your input. Is there anything about potential Russian interference in the 2016 election that I should know more about?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":151,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe that Chuck E Cheese pizza is reassembled, you do not get the whole fresh pizza from them. It makes sense form all the pictures I've seen of pizzas where the slices are not the same size and do not form a singular pie. I watched Shane Dawson's youtube video about it and it was extremely compelling.","human_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Corporation","family":"THEME","sub":"Corporation"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":2,"text":"I think that although Chuck E Cheese addressed it, they cannot control all their employee's actions. The employees might be doing this without managerial approval. It may not be all the time, but definitely in some cases. Even if the pizza is cut strangely, it would still be able to fit back into the pie shape when put back together.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"Wow, you are assuming that there is such sophistication at an arcade restaurant. I hear your points, but this place is not that technologically advanced in my opinion. (And I know someone who used to work there who admitted to it) ------------------------------------------------------------------------------------------","human_only":[],"both":[{"code":"EVIDENCE-Anecdotal","family":"EVIDENCE","sub":"Anecdotal"}],"llm_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"}],"match":false,"human_count":1,"llm_count":2},{"turn_number":4,"text":"Dang, you are very convincing. I still think humans and employees in general will always find a way, but I see that it is definitely not a simple endeavor.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":152,"coder":"Coder_B","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The conspiracy theory of aliens being real. Especially with the recent hearings with congress about UFOs - its clear the US is investing money into this so I do believe they are hiding aliens from us or at least space crafts that are not from here. Congress was recently briefed from veterans about their experiences with UFOs or organizations involved with investigating UFOs. Additionally Bob Lazer was a very reliable source who apparently worked at Area 51. Not to mentioned videos released from the pentagon are also very credible.","human_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Expert","family":"EVIDENCE","sub":"Expert"}],"both":[{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Space","family":"THEME","sub":"Space"}],"llm_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":4,"llm_count":4},{"turn_number":2,"text":"While you bring up some fair points I disagree.\n\nThe US government would not be investing as much time and money into these UAP programs if they were not widely unknown to them. If it was another foreign nation they wouldn't be as secretive about this programs or even not acknowledge them. The US is known to have the latest types of technology, it is not a foreign nation.\n\nThe veteran stories help correlate the other evidence that has been shown. These are reliable sources that went through background checks, no crazy people on the internet. The describe how futuristic these technologies are and how advanced they are where its not something we can make, helping prove more its not of this world.\n\nBob Lazar is a reliable source. He was validated by reporters and his story adds up. It was even proven that the government tried to make it seem like he was telling lies by falsifying his previous work - stating he never worked at a college. However he did work at that college and provide proof, why would they try and cover that up so much if what he was saying wasn't true.\n\nWhile the videos from the pentagon don't show any aliens, they do help show the alien like space crafts in action. Performing impossible maneuvers that no foreign nation or us could create.","human_only":[{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"llm_only":[{"code":"EVIDENCE-Character Based","family":"EVIDENCE","sub":"Character Based"},{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":2,"llm_count":4},{"turn_number":3,"text":"I still disagree on your point that these might be foreign nations or just because it seems extraterrestrial doesn't mean it is. For example there were hearings with congress where whistle blower David Grush claimed, under oath that the federal government maintains a high secretive UFO retrieval program and posses multiple spacecraft of non-human origin as well as corpses of deceased pilots. These are not human pilots and he specifically specifies the ship as non-human. David is a combat veteran and former Air Force Intelligence officer. He is a reliable source stating facts. Now he could not disclose a lot of information to the public yet but was allowed to say that publicly.\n\nFinally once again for Bob Lazar, recently they also were able to find a coworker that worked at the same facility as Bob Lazar and was able to corporate he was working at the government facility in Nevada.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"}],"match":false,"human_count":1,"llm_count":2},{"turn_number":4,"text":"Just because you don't have physical proof or evidence doesn't mean you can disregard what David is saying. He was able to talk to congress more about the subject but that was behind closed doors of course. However the department of defense acknowledged he would speak on this and allowed it. While they did state that while allowing David to speak on this doesn't mean they are verifying his claims - the fact that they even let him disclose this information speaks volumes of the direction we are heading in. With his career and being place under oath, and his background, if he has his own evidence of it being non-\n\nhuman, I believe him.\n\nI understand your issue with Bob Lazar still, but if his story is now being corroborated your initial response of it being false due to unverified claims with only some truth does not work. I was disproving that, yet similar with David - if Bob's claims are accurate of him working at this facility, I also believe him on his stories of working on the UFOs -\n\ntrying to reverse engineer the space crafts. Additionally Bob described the \"pill\" like shape of the UFOs far before any video was released. Then the pentagon releases video of these UFOs and what do you know, its the same \"pill\" shape Bob described far back.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Expert","family":"EVIDENCE","sub":"Expert"},{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":0,"llm_count":3}]},{"sample_number":164,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"Chemtrails come to mind since a friend of mine believes that our government has hazardous chemicals in aircraft vapor trails. I find it somewhat compelling or credible as a way to eliminate some of the population. An event is that a good friend of mine, who is educated, has tried to convince me. I have not personally found any convincing evidence. I think it might be possible that the federal government is responsible for hazardous chemical trails as aircraft vapor.","human_only":[{"code":"EVIDENCE-Social Proof","family":"EVIDENCE","sub":"Social Proof"}],"both":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"match":false,"human_count":4,"llm_count":4},{"turn_number":2,"text":"It is an excellent idea to search for scientific knowledge and evidence from respected sources.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I agree that one should give higher priority to scientists' findings, and I will do more research.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Those are excellent suggestions.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":166,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"One conspiracy theory that I think holds a lot of weight is Operation Mockingbird and I do believe MSM and other media outlets that are more centralized online/social media are used for the purposes of propaganda, fueling gloom and doom, causing division, and deliberately misinforming the public. When people are constantly glued in to that, it manifests as irrational thinking and emotional instability which causes people to become scared, suspicious of, and untrusting of everything/everyone in their external world. It resonates with me because I consider myself to have a great deal of discernment, I can remain objective/unbiased better than most, and I am also able to see the nuance in topics/discussions where most normalize taking the most extreme stance on since I don't need to identify with something in order to agree or disagree with it. When you are able to see the larger picture, do your own research, and not take everything at fact value you are able to accept that being informed is better than simply wanting to be on the right side of a belief or ideal because someone or something said it was \"acceptable\". I don't consider myself a \"conspiracy theorist\" by any means, but Operation Mockingbird is one theory that I decided to go down a rabbit hole with years ago after noticing blatant deceptive patterns of behavior and obfuscation with the news media. Upon my own independent research, I discovered there is a lot of evidence to support that this is taking place (and has been for a long, long time) and there hasn't been an antithetical argument that has been able to sway me into believing that it isn't taking place. I am not aware of any \"commonly accepted explanations\" for similar events, but plausible deniability would be the accepted stance of those orchestrating and contributing to it anyway.","human_only":[],"both":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Media","family":"THEME","sub":"Media"}],"llm_only":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"}],"match":false,"human_count":4,"llm_count":5},{"turn_number":2,"text":"The \"scale and continuation of such a program\" lacking substantial evidence is incorrect and I trust my ability to research credible sources of information to come to that conclusion. Operation Mockingbird was used as a foundation of my argument due to similar tactics being used today with no mention of who or what is truly responsible for weaponizing said tactics. My argument isn't much of an argument, but is indeed sound and isn't baseless by any means.","human_only":[],"both":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":3,"text":"I don't have any cognitive biases and remain objective, fair, neutral, apolitical, and detached from any ideologies that would otherwise easily sway most others. I am confident that my own human cognitive abilities are more solid than a generative AI tool designed to make me question my stance and be more accepting to official narratives.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"As mentioned before, my stance is an unbiased and objective one that doesn't need to be validated by consuming sources of information that align with \"my views\". I have no \"view\", I simply came to a conclusion based on my own observation/research and IF\n\ninformation comes out to make me reconsider that stance, only then will I reconsider as I am not rigid or beholden to one way of thinking.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":173,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I don't believe that Princess Diana's death was an \"accident\". Charles could not marry Camilla while Diana was still alive. There are many small things that lead to this belief.\n\nTiming of the crash and ambulance tending to her. Also, Diana even said to a friend that she believes something will happen to her. She knew what \"The Crown\" would and could do and get away with.","human_only":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"both":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"match":false,"human_count":3,"llm_count":4},{"turn_number":2,"text":"Yes, there have been many investigations over the years. However, the Royal family can not be arrested. THey are free to get away with plans to take someone out if they want to.\n\nLook at how Edward has not gotten in trouble for being VERY good friends with Jeffrey Epstein and the accusations there.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"THEME-Elite","family":"THEME","sub":"Elite"}],"match":false,"human_count":0,"llm_count":2},{"turn_number":3,"text":"It may make them look bad to the public, but that doesn't mean they don't still do these things. They have immunity. THey can get away with whatever they want to. Prince Charles knew that the public would not like him marrying Camilla, especially while Diana was still around.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"WIth the way things happened and how certain people acted, there really is nothing that would change my mind about Diana's death. I believe there's only a few that know the whole truth.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":0,"llm_count":1}]},{"sample_number":174,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The NBA rigged the 1985 draft so that the Knicks would win the lottery and gain the rights to draft Patrick Ewing. New York was falling from grace and the NBA needed a big market team like them to be successful The envelope used to draw the first pick had a crease in it. The commissioner was told to fish around for the envelope with the crease. This contained the New York Knicks","human_only":[],"both":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"THEME-Corporation","family":"THEME","sub":"Corporation"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":2,"text":"I respect your position, but I am 100% convinced that this draft was rigged with an identifiable envelope. It wasn't just David Stern that was involved, but everyone that was needed to make this happen.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":3,"text":"There is a pattern of rigged NBA drafts in the years that follow this. 2003 netted the Cleveland Cavaliers the top pick to draft local phenom LeBron James. When LeBron left Cleveland for Miami, Cleveland won another draft lottery to select Kyrie Irving to help build the team. The Chicago Bulls won an unlikely lottery to draft their local star Derrick Rose. There are many cases of this happening","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"I will have to consider these points more, but in my mind, the NBA lacks integrity with many of their processes. The draft is no different.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":183,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"That crazy celebrity baby names are fake names in order to protect their privacy. This resonates with me because it is very believable and makes sense why it would be done.\n\nThere is no specific evidence I have come across. I read about this theory online and it seems like it would be real and believable.","human_only":[],"both":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"llm_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"}],"match":false,"human_count":1,"llm_count":2},{"turn_number":2,"text":"I believe these simpler explanations make a lot of sense and would have to agree with the points made.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I do not have any more thoughts or questions about this topic.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you. Have a great day too!","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":196,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"A climate change conspiracy theory alleges that the science behind climate change has been invented or distorted for ideological or financial reasonsâ€”higher taxation, controls on lifestyle, and more authoritarian government. I somewhat agree with it because climate change is mainly used to sway people politically. Most of these environmental disasters have been present in the past and it was not blown out of proportion like nowadays. The government and other environmental organizations try to control people's lives by pushing expensive green products. Why do they make sustainable products so expensive if they want to motivate people to use them?","human_only":[{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"both":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"match":false,"human_count":4,"llm_count":5},{"turn_number":2,"text":"What credible sources do you suggest I read from?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Do these organizations benefit from climate change? Don't they get more funds because they're investing in climate change?","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"Noted. Are they working on making sustainability cheaper?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":200,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"That cigarette companies knew of the health risks of smoking and hid it for years. This has been proven to be true. It is one of the few times that a conspiracy theory was proven to be correct. I watched the movie The Insider about 60 Minutes reporting on the tobacco industry and I remember the fall-out from that report.","human_only":[{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Corporation","family":"THEME","sub":"Corporation"}],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":4,"llm_count":3},{"turn_number":2,"text":"I was only referring to one situation. This one example of corporate misconduct does not mean that I think that all companies are corrupt.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"No, this is one example where a conspiracy theory turned out to be true. It shows how a company will put profit ahead of public health, If we don't study and remember past wrongs that society or companies do people will forget that they have to be held accountable and they might be able to revert to their old ways.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"Yes, we can agree. It was nice talking to you.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":202,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"There have been countless sightings of a Loch Ness monster at Flathead Lake, Montana. I believe there is or was a Loch Ness monster and it was covered up so the public would not panic. It resonates with me because I am fascinated with what lives underwater and how little we really know about it. There have been countless sightings, photographs, and some sonar readings about this monster. Hugh Gray published a photo of the monster and there was no photoshop back then. Science will always try to give an explanation but it doesn't mean they are right about everything. I interrupt the evidence is that they want to cover up everything they can because they don't want mass pandemonium.","human_only":[{"code":"EVIDENCE-Expert","family":"EVIDENCE","sub":"Expert"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"}],"match":false,"human_count":6,"llm_count":3},{"turn_number":2,"text":"I believe you make some excellent points but sometimes certain things cannot be explained by science. Cover-ups have been around forever and they will sacrifice whoever for the casue.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I believe the government controls whatever they want to and any whistleblower can be made to disappear in an instance.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Money and power control the world. Any system in place can be finagled to produce the outcome someone wants. It wouldn't be hard to scare being into doing what they want and the threat of jail or death usually causes most people to follow the story.","human_only":[{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"both":[],"llm_only":[],"match":false,"human_count":1,"llm_count":0}]},{"sample_number":205,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"That Covid was created and/or released from a lab. Maybe not on purpose but it either escaped organically or was brought out by bad characters and spread organically. I just don't believe it was a natural occurrence. The evidence points to it starting in Wuhan and there is an infectious disease lab there. China controls everything over there so they can easily deny it but the coincidences are too real. I actually think there is evidence to support it started or was released by the lab but no proof yet as it has been covered up by the Chinese government.","human_only":[],"both":[{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":2,"llm_count":3},{"turn_number":2,"text":"The WHO wasn't allowed into the lab for months after the outbreak, right? I'm not saying it was engineered or purposely released from the lab but that they had the virus and somehow it got out.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Fair points but we are dealing with China and they are experts in controlling and manipulating information as they have been doing for their citizens and the world for decades. There are scientists who believe the virus came from the lab and we may never know and that is part of the problem.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Expert","family":"EVIDENCE","sub":"Expert"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"Again, I'm not saying the virus was created or purposely leaked from the lab. I am saying they had the virus there, that's where the outbreak started....the virus came from the lab either by accident or by a bad character.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":207,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I do believe that China created the Coronavirus in a lab. The Coronavirus was created in a lab to keep President Donald Trump from being re-elected in the United States in the 2020 Presidential Election. The Coronavirus hurt the United States economically and caused many Americans to die. This virus made it impossible to have a fair in person election and allowed voter fraud to happen.","human_only":[],"both":[{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[],"match":true,"human_count":5,"llm_count":5},{"turn_number":2,"text":"I am willing to listen to you side. I am doubtful though that your arguments will convince me to believe differently about this subject matter.","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"Yes, I would consider looking into some of this information.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"Thank you for the information that you provided me with.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":209,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I feel like the United States knew the attacks on September 11th was going to happen. They did not stop it because they had a lot more to gain by going to war. They were able to take oil and make money through other avenues such as defense contracts. This resonates with me because it was the first conflict that I was old enough to remember happening in my lifetime. I've seen documentaries on youtube that have stated things such as the jet fuel from the air planes could not have melted the steel in the towers that quickly. I've also heard that the CIA had received multiple advanced warnings and willfully ignored them. All of these theories are relatively popular but no one questions it because you dont want to believe that you government would let something like that happen.","human_only":[{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"}],"both":[{"code":"EVIDENCE-Media/Documents","family":"EVIDENCE","sub":"Media/Documents"},{"code":"EVIDENCE-Motive Based","family":"EVIDENCE","sub":"Motive Based"},{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"},{"code":"THEME-Money/Power","family":"THEME","sub":"Money/Power"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"},{"code":"THEME-Science","family":"THEME","sub":"Science"}],"match":false,"human_count":7,"llm_count":9},{"turn_number":2,"text":"How much money did private defense contractors make from the war?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"Why didnt the united states invade saudi arabia?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"What was the war supposed to accomplish?","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":219,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"I believe the CIA distributed drugs to the black neighborhoods to undermine the culture of african american families. i believe black americans were threating the white power and the CIA acted upon the government orders There have been previous CIA agent who have confessed to allowing drugs to filter into black areas of cities. they turned a blind eye to drug dealing and allowed it to happen. they plead innocence but i know they are being protected","human_only":[{"code":"EVIDENCE-Character Based","family":"EVIDENCE","sub":"Character Based"}],"both":[{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"llm_only":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":3,"llm_count":4},{"turn_number":2,"text":"I believe that the CIA is hiding the hard evidence. they would never blantly admit that the order came straight from the president. it will never be reveled until all parties are dead and buried","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"I still believe what i believe, nobody can change my mind","human_only":[],"both":[],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"I am not sure what else i can say to persuade you to my side","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":221,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"The conspiracy that jumps out at me is the assassination of JFK in Dallas. This is very interesting because it reveals the most visible seat of power within the US government is at risk from practically rogue elements within itself. It implies that the CIA and other three letter agencies answer to no one and are free to do whatever they would like with their black budgets. The assassination of President Kennedy was merely the most visible and significant killing in a series of murders that continues to this day. The murders of Lee Harvey Oswald, RFK and MLK Jr. also seem to be a part of this spree. The CIA does not necessarily directly control the US government, but it seems to be able to influence politics abroad directly through agitation, violent suppression, political assassinations and coup d'états. It would therefore follow that the largely unaccountable CIA would be influencing American politics in the same ways. It is hard to point to a single piece of evidence that led me to believe the idea of conspiracy to murder JFK. There are simply too many unanswered questions and lies surrounding those events.","human_only":[],"both":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-Domestic Politics","family":"THEME","sub":"Domestic Politics"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"},{"code":"THEME-Government Cover-up","family":"THEME","sub":"Government Cover-up"}],"match":false,"human_count":4,"llm_count":6},{"turn_number":2,"text":"The CIA's accountability to the President or to anyone is questionable at best when they can hide anything they want under the guise of \"national security.\" The Warren commission has been proven to be questionable at best. One of the things the CIA does best is kill inconvenient people and construct false narratives around them while hiding the truth.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"How can one trust the CIA at any level when they have been repeatedly tied to murders, coups and subversion across the world and especially in Latin America. The CIA will never be accountable to American or international law so long as they are allowed to continue to exist. This is easily proven by their conducting of illegal operations within the United States. The CIA is supposed to be an intelligence agency, but has a budget far exceeding what would be necessary to simply keep tabs on American enemies. Regardless, assuming other elements of the government will keep the CIA in check is based on an assumption that they themselves are accountable and not corrupted entirely in the pursuit of furthering the American global order of capitalist exploitation and repression of labor politics.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":4,"text":"The idea that the CIA has become more accountable since 9/11 and the global war on terror is laughable. Furthermore, the CIA did not make any mistakes in the cold war. The path of destruction left by that agency was perfectly intentional. Even if their actions have become public, no one was prosecuted, no one was sentenced for international crimes and no one was held responsible. The Iran Contra scandal proves that the highest level of government are compromised and no longer serve the people or the ideals of freedom and democracy.","human_only":[],"both":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"llm_only":[{"code":"SIGNAL-Deep-Belief","family":"SIGNAL","sub":"Deep-Belief"}],"match":false,"human_count":1,"llm_count":2}]},{"sample_number":226,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"9/11 Controlled Demolition.\n\nI have always found this one to be quite intriguing I especially recall reading quite a lot from Architects and Engineers state some pretty compelling and believable dialouge and it resonated quite well I can mostly recall the explanation of how the way the buildings fell so quickly and perfectly matched how a controlled demolition would be. Witnesses reports of explosions being heard before the Towers collapsed certainly also made this a very interesting topic.","human_only":[{"code":"EVIDENCE-Unspecified Sources","family":"EVIDENCE","sub":"Unspecified Sources"},{"code":"THEME-Assassination","family":"THEME","sub":"Assassination"},{"code":"THEME-International Politics","family":"THEME","sub":"International Politics"}],"both":[{"code":"EVIDENCE-Eyewitness","family":"EVIDENCE","sub":"Eyewitness"},{"code":"THEME-Historical Event","family":"THEME","sub":"Historical Event"}],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"},{"code":"EVIDENCE-Expert","family":"EVIDENCE","sub":"Expert"},{"code":"SIGNAL-Shallow-Belief","family":"SIGNAL","sub":"Shallow-Belief"}],"match":false,"human_count":5,"llm_count":5},{"turn_number":2,"text":"It's certainly a complex topic with various perspectives, however how can the claims about thermite residue being found in the debris be explained here?","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":3,"text":"I appreciate the detailed information you provided, but how can the collapse of Building 7 which wasn't directly hit by a plane be explained ?","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Anomalies","family":"EVIDENCE","sub":"Anomalies"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"Thank you for the detailed explanations It has certainly given me a lot to think about and a new perspective","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]},{"sample_number":228,"coder":"Coder_C","version":"v6.2","model":"gemini-3.1-pro-preview","turns":[{"turn_number":1,"text":"i think that there are hormones in the city water. i believe that doctors prescirbe it and it ends up in the water supply and it causes sterilization in men and women i think it ends up in our water supply because they dont treat the water for the hormones","human_only":[],"both":[{"code":"THEME-Science","family":"THEME","sub":"Science"}],"llm_only":[],"match":true,"human_count":1,"llm_count":1},{"turn_number":2,"text":"but mistakes happen and i dont believe that our government has our best interest in mind on such issues.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0},{"turn_number":3,"text":"if that is the case, that the government has so many checks and balances. why do recalls on food happen or why do we get a boil water warning issued in some cities.","human_only":[],"both":[],"llm_only":[{"code":"EVIDENCE-Analogy","family":"EVIDENCE","sub":"Analogy"}],"match":false,"human_count":0,"llm_count":1},{"turn_number":4,"text":"ok now look at how the \"BOIL WATER\" advisories are given to the public. there are lots of people that that advisory doesnt reach out to. i just dont trust the government with a lot of things. i believe that the government allows bad things to happen often.","human_only":[],"both":[],"llm_only":[],"match":true,"human_count":0,"llm_count":0}]}],"families":[{"family":"EVIDENCE","subs":[{"sub":"Analogy","code":"EVIDENCE-Analogy"},{"sub":"Anecdotal","code":"EVIDENCE-Anecdotal"},{"sub":"Anomalies","code":"EVIDENCE-Anomalies"},{"sub":"Character Based","code":"EVIDENCE-Character Based"},{"sub":"Expert","code":"EVIDENCE-Expert"},{"sub":"Eyewitness","code":"EVIDENCE-Eyewitness"},{"sub":"Media/Documents","code":"EVIDENCE-Media/Documents"},{"sub":"Moral Framing","code":"EVIDENCE-Moral Framing"},{"sub":"Motive Based","code":"EVIDENCE-Motive Based"},{"sub":"Social Proof","code":"EVIDENCE-Social Proof"},{"sub":"Unspecified Sources","code":"EVIDENCE-Unspecified Sources"}]},{"family":"SIGNAL","subs":[{"sub":"Deep-Belief","code":"SIGNAL-Deep-Belief"},{"sub":"Shallow-Belief","code":"SIGNAL-Shallow-Belief"}]},{"family":"THEME","subs":[{"sub":"Assassination","code":"THEME-Assassination"},{"sub":"Corporation","code":"THEME-Corporation"},{"sub":"Domestic Politics","code":"THEME-Domestic Politics"},{"sub":"Elite","code":"THEME-Elite"},{"sub":"Government Cover-up","code":"THEME-Government Cover-up"},{"sub":"Historical Event","code":"THEME-Historical Event"},{"sub":"International Politics","code":"THEME-International Politics"},{"sub":"Media","code":"THEME-Media"},{"sub":"Money/Power","code":"THEME-Money/Power"},{"sub":"Science","code":"THEME-Science"},{"sub":"Secret Society","code":"THEME-Secret Society"},{"sub":"Space","code":"THEME-Space"}]}],"meta":{"n_conversations":45,"n_turns":180,"version":"v6.2","model":"gemini-3.1-pro-preview"}}</script>
+<script>
+(function(){
+"use strict";
+
+const RAW = JSON.parse(document.getElementById('app-data').textContent);
+const CONVERSATIONS = RAW.conversations;
+const FAMILIES = RAW.families;
+const META = RAW.meta;
+
+const FAMILY_COLOR_VAR = {
+  '?':'--fam-unknown',
+  'ATTITUDE':'--fam-attitude',
+  'EVIDENCE':'--fam-evidence',
+  'EXTRA':'--fam-extra',
+  'FAllACY':'--fam-fallacy',
+  'FUTURE':'--fam-future',
+  'INVOKE':'--fam-invoke',
+  'LACK':'--fam-lack',
+  'SIGNAL':'--fam-signal',
+  'THEME':'--fam-theme'
+};
+const FAMILY_ORDER = ['SIGNAL','THEME','EVIDENCE','ATTITUDE','EXTRA','FUTURE','INVOKE','LACK','FAllACY','?'];
+FAMILIES.sort((a,b)=>{
+  const ia = FAMILY_ORDER.indexOf(a.family), ib = FAMILY_ORDER.indexOf(b.family);
+  const pa = ia===-1 ? 999 : ia, pb = ib===-1 ? 999 : ib;
+  if(pa!==pb) return pa-pb;
+  return a.family.localeCompare(b.family);
+});
+function famColor(fam){
+  const v = FAMILY_COLOR_VAR[fam] || '--fam-unknown';
+  return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+}
+function famLabel(fam){
+  if(fam === '?') return '?';
+  if(fam === 'FAllACY') return 'Fallacy';
+  return fam.charAt(0) + fam.slice(1).toLowerCase();
+}
+
+// ---------------- State ----------------
+const maxSample = Math.max(...CONVERSATIONS.map(c=>c.sample_number));
+const minSample = Math.min(...CONVERSATIONS.map(c=>c.sample_number));
+const state = {
+  search: '',
+  agreement: 'all', // 'all' | 'match' | 'mismatch'
+  ranges: {
+    sample_number: {min:minSample, max:maxSample, lo:minSample, hi:maxSample},
+    turn_number: {min:1, max:4, lo:1, hi:4},
+    human_count: {min:0, max:9, lo:0, hi:9},
+    llm_count: {min:0, max:9, lo:0, hi:9}
+  },
+  queryGroups: []
+};
+
+// ---------------- Filtering ----------------
+function turnMatchesBaseFilters(conv, turn){
+  const r = state.ranges;
+  if(conv.sample_number < r.sample_number.lo || conv.sample_number > r.sample_number.hi) return false;
+  if(turn.turn_number < r.turn_number.lo || turn.turn_number > r.turn_number.hi) return false;
+  if(turn.human_count < r.human_count.lo || turn.human_count > r.human_count.hi) return false;
+  if(turn.llm_count < r.llm_count.lo || turn.llm_count > r.llm_count.hi) return false;
+  if(state.agreement === 'match' && !turn.match) return false;
+  if(state.agreement === 'mismatch' && turn.match) return false;
+  if(state.search && !turn.text.toLowerCase().includes(state.search)) return false;
+  return true;
+}
+
+function turnUnionCodes(turn){
+  const s = new Set();
+  turn.human_only.forEach(c=>s.add(c.code));
+  turn.both.forEach(c=>s.add(c.code));
+  turn.llm_only.forEach(c=>s.add(c.code));
+  return s;
+}
+
+function turnMatchesCodes(turn){
+  if(!state.queryGroups.length) return true;
+  const codes = turnUnionCodes(turn);
+  for(const group of state.queryGroups){
+    if(!group.length) continue;
+    const ok = group.some(entry => entry.negate ? !codes.has(entry.code) : codes.has(entry.code));
+    if(!ok) return false;
+  }
+  return true;
+}
+
+function queryIsActive(){ return state.queryGroups.some(g=>g.length>0); }
+
+function computeResults(){
+  const results = [];
+  let totalMatchingTurns = 0;
+  for(const conv of CONVERSATIONS){
+    const turnFlags = conv.turns.map(t => turnMatchesBaseFilters(conv, t) && turnMatchesCodes(t));
+    if(turnFlags.some(Boolean)){
+      results.push({conv, turnFlags});
+      totalMatchingTurns += turnFlags.filter(Boolean).length;
+    }
+  }
+  return {results, totalMatchingTurns};
+}
+
+// visible turns (respecting base filters + code query) used for stats computation
+function visibleTurns(){
+  const out = [];
+  for(const conv of CONVERSATIONS){
+    for(const t of conv.turns){
+      if(turnMatchesBaseFilters(conv, t) && turnMatchesCodes(t)) out.push(t);
+    }
+  }
+  return out;
+}
+
+function computeFacetCounts(){
+  const counts = new Map();
+  for(const conv of CONVERSATIONS){
+    for(const t of conv.turns){
+      if(!turnMatchesBaseFilters(conv, t)) continue;
+      turnUnionCodes(t).forEach(code=>counts.set(code, (counts.get(code)||0)+1));
+    }
+  }
+  return counts;
+}
+
+// ---------------- Query group mutation helpers ----------------
+function findEntry(code){
+  for(let gi=0; gi<state.queryGroups.length; gi++){
+    const ei = state.queryGroups[gi].findIndex(e=>e.code===code);
+    if(ei !== -1) return {gi, ei};
+  }
+  return null;
+}
+function toggleCodeInQuery(code){
+  const found = findEntry(code);
+  if(!found){
+    // default: each new code becomes its own AND-group (AND across distinct codes by default)
+    state.queryGroups.push([{code, negate:false}]);
+  } else {
+    const entry = state.queryGroups[found.gi][found.ei];
+    if(!entry.negate){ entry.negate = true; }
+    else {
+      state.queryGroups[found.gi].splice(found.ei, 1);
+      if(state.queryGroups[found.gi].length === 0) state.queryGroups.splice(found.gi, 1);
+    }
+  }
+}
+function removeEntryAt(gi, ei){
+  state.queryGroups[gi].splice(ei, 1);
+  if(state.queryGroups[gi].length === 0) state.queryGroups.splice(gi, 1);
+}
+function toggleNegateAt(gi, ei){ state.queryGroups[gi][ei].negate = !state.queryGroups[gi][ei].negate; }
+function addNewGroup(){ state.queryGroups.push([]); }
+function removeGroupAt(gi){ state.queryGroups.splice(gi, 1); }
+// Merge group[gi] into group[gi-1] -- turns an AND relation into OR
+function mergeGroupUp(gi){
+  if(gi<=0 || gi>=state.queryGroups.length) return;
+  state.queryGroups[gi-1] = state.queryGroups[gi-1].concat(state.queryGroups[gi]);
+  state.queryGroups.splice(gi, 1);
+}
+// Split group[gi] at entry index ei -- extracts entries [ei..end) into a new group right after -- turns an OR relation into AND
+function splitGroupAt(gi, ei){
+  const group = state.queryGroups[gi];
+  if(ei<=0 || ei>=group.length) return;
+  const tail = group.splice(ei);
+  state.queryGroups.splice(gi+1, 0, tail);
+}
+
+function codeFamilyOf(code){
+  for(const f of FAMILIES) if(f.subs.some(s=>s.code===code)) return f.family;
+  return '?';
+}
+function labelForCode(code){
+  for(const f of FAMILIES){
+    const s = f.subs.find(s=>s.code===code);
+    if(s) return famLabel(f.family) + (s.sub ? ' · ' + s.sub : '');
+  }
+  return code;
+}
+
+// ---------------- DOM helpers ----------------
+function el(tag, attrs={}, children=[]){
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==='class') e.className = v;
+    else if(k==='html') e.innerHTML = v;
+    else if(k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for(const c of [].concat(children)){
+    if(c==null) continue;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return e;
+}
+function fmtScore(v){ return Number.isInteger(v) ? String(v) : v.toFixed(1); }
+function hexToRgba(hex, alpha){
+  hex = hex.replace('#','').trim();
+  if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+  const r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16), b = parseInt(hex.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderDualSlider(container, key, cfg, label, onChange){
+  const block = el('div', {class:'range-block'});
+  const valueSpan = el('span', {class:'range-values'}, `${fmtScore(cfg.lo)} – ${fmtScore(cfg.hi)}`);
+  const labelRow = el('div', {class:'range-label-row'}, [el('span', {class:'range-label'}, label), valueSpan]);
+  const slider = el('div', {class:'dual-slider'});
+  const track = el('div', {class:'track'});
+  const fill = el('div', {class:'fill'});
+  const thumbLo = el('div', {class:'thumb', tabindex:'0', role:'slider', 'aria-label':label+' minimum'});
+  const thumbHi = el('div', {class:'thumb', tabindex:'0', role:'slider', 'aria-label':label+' maximum'});
+  slider.append(track, fill, thumbLo, thumbHi);
+  block.append(labelRow, slider);
+  container.appendChild(block);
+
+  const span = cfg.max - cfg.min;
+  function pct(v){ return span===0 ? 0 : ((v - cfg.min) / span) * 100; }
+  function valFromPct(p){
+    let v = cfg.min + (p/100)*span;
+    v = Math.round(v);
+    return Math.max(cfg.min, Math.min(cfg.max, v));
+  }
+  function update(){
+    const loP = pct(cfg.lo), hiP = pct(cfg.hi);
+    thumbLo.style.left = loP + '%';
+    thumbHi.style.left = hiP + '%';
+    fill.style.left = loP + '%';
+    fill.style.width = (hiP - loP) + '%';
+    valueSpan.textContent = `${fmtScore(cfg.lo)} – ${fmtScore(cfg.hi)}`;
+  }
+  update();
+
+  function bindDrag(thumb, which){
+    thumb.addEventListener('pointerdown', (e)=>{
+      thumb.setPointerCapture(e.pointerId);
+      const rect = slider.getBoundingClientRect();
+      function move(ev){
+        let p = ((ev.clientX - rect.left) / rect.width) * 100;
+        p = Math.max(0, Math.min(100, p));
+        const v = valFromPct(p);
+        if(which==='lo'){ cfg.lo = Math.min(v, cfg.hi); } else { cfg.hi = Math.max(v, cfg.lo); }
+        update(); onChange();
+      }
+      function up(ev){
+        thumb.releasePointerCapture(e.pointerId);
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      }
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+    thumb.addEventListener('keydown', (e)=>{
+      let delta = 0;
+      if(e.key==='ArrowLeft' || e.key==='ArrowDown') delta = -1;
+      else if(e.key==='ArrowRight' || e.key==='ArrowUp') delta = 1;
+      else return;
+      e.preventDefault();
+      if(which==='lo'){ cfg.lo = Math.max(cfg.min, Math.min(cfg.hi, cfg.lo+delta)); }
+      else { cfg.hi = Math.min(cfg.max, Math.max(cfg.lo, cfg.hi+delta)); }
+      update(); onChange();
+    });
+  }
+  bindDrag(thumbLo, 'lo');
+  bindDrag(thumbHi, 'hi');
+}
+
+function updateFacetCountsInPlace(){
+  const counts = computeFacetCounts();
+  document.querySelectorAll('.code-chip[data-code]').forEach(chip=>{
+    const code = chip.getAttribute('data-code');
+    const n = chip.querySelector('.n');
+    if(n) n.textContent = `${counts.get(code) || 0}`;
+  });
+}
+
+let openFamilies = new Set();
+
+// ---------------- Filters panel ----------------
+function renderFilters(){
+  const root = document.getElementById('filters');
+  root.innerHTML = '';
+
+  // Search
+  const searchSection = el('div', {class:'filter-section'});
+  searchSection.append(el('div', {class:'filter-section-title'}, 'Search text'));
+  const searchBox = el('div', {class:'search-box'});
+  searchBox.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+  const searchInput = el('input', {type:'text', placeholder:'Search within turn text…', value: state.search});
+  searchInput.addEventListener('input', (e)=>{
+    state.search = e.target.value.toLowerCase();
+    renderFeed(); renderStats(); renderStatsSummary(); updateFacetCountsInPlace();
+  });
+  searchBox.appendChild(searchInput);
+  searchSection.appendChild(searchBox);
+  root.appendChild(searchSection);
+
+  // Agreement toggle
+  const agreeSection = el('div', {class:'filter-section'});
+  agreeSection.append(el('div', {class:'filter-section-title'}, 'Agreement'));
+  const seg = el('div', {class:'segmented'});
+  const opts = [['all','All'],['match','Match'],['mismatch','Mismatch']];
+  opts.forEach(([key,label])=>{
+    const cls = 'seg' + (state.agreement===key?' active':'') + (key==='mismatch' && state.agreement==='mismatch' ? ' mismatch':'');
+    const segEl = el('div', {class:cls}, label);
+    segEl.addEventListener('click', ()=>{ state.agreement = key; renderAll(); });
+    seg.appendChild(segEl);
+  });
+  agreeSection.appendChild(seg);
+  root.appendChild(agreeSection);
+
+  // Numeric ranges
+  const numSection = el('div', {class:'filter-section'});
+  const numTitle = el('div', {class:'filter-section-title'}, [
+    document.createTextNode('Numeric metrics'),
+    el('span', {class:'reset-link', onclick:()=>{
+      state.ranges.sample_number = {min:minSample,max:maxSample,lo:minSample,hi:maxSample};
+      state.ranges.turn_number = {min:1,max:4,lo:1,hi:4};
+      state.ranges.human_count = {min:0,max:9,lo:0,hi:9};
+      state.ranges.llm_count = {min:0,max:9,lo:0,hi:9};
+      renderAll();
+    }}, 'reset')
+  ]);
+  numSection.appendChild(numTitle);
+  renderDualSlider(numSection, 'sample_number', state.ranges.sample_number, 'Sample number', renderAll);
+  renderDualSlider(numSection, 'turn_number', state.ranges.turn_number, 'Turn number', renderAll);
+  renderDualSlider(numSection, 'human_count', state.ranges.human_count, 'Human code count', renderAll);
+  renderDualSlider(numSection, 'llm_count', state.ranges.llm_count, 'LLM code count', renderAll);
+  root.appendChild(numSection);
+
+  // Stats summary
+  const statsSection = el('div', {class:'filter-section', id:'statsSummarySection'});
+  statsSection.append(el('div', {class:'filter-section-title'}, 'Agreement stats (current view)'));
+  const statsBody = el('div', {id:'statsSummaryBody'});
+  statsSection.appendChild(statsBody);
+  root.appendChild(statsSection);
+
+  // Codes
+  const codeSection = el('div', {class:'filter-section'});
+  const codeTitle = el('div', {class:'filter-section-title'}, [
+    document.createTextNode('Codes'),
+    el('span', {class:'reset-link', onclick:()=>{ state.queryGroups = []; renderAll(); }}, 'clear')
+  ]);
+  codeSection.appendChild(codeTitle);
+  codeSection.appendChild(el('div', {style:'font-size:11.5px; color:var(--ink-muted); margin:-6px 0 12px; line-height:1.5;'},
+    'Click a code to add it as its own AND clause (matches if it appears for either human or LLM). Click again to negate (!), once more to remove. Click "AND" between two clauses to turn it into OR; click "OR" to split back into AND.'));
+
+  const queryBox = el('div', {class:'query-builder'});
+  renderQueryBuilder(queryBox);
+  codeSection.appendChild(queryBox);
+
+  const expandRow = el('div', {class:'expand-all-row'}, [
+    el('span', {onclick:()=>{ FAMILIES.forEach(f=>openFamilies.add(f.family)); renderFilters(); }}, 'expand all'),
+    el('span', {onclick:()=>{ openFamilies.clear(); renderFilters(); }}, 'collapse all')
+  ]);
+  codeSection.appendChild(expandRow);
+
+  const facetCounts = computeFacetCounts();
+
+  FAMILIES.forEach(f=>{
+    const color = famColor(f.family);
+    const isOpen = openFamilies.has(f.family);
+    const group = el('div', {class:'family-group' + (isOpen?' open':'')});
+    const header = el('div', {class:'family-header'});
+    header.append(
+      el('div', {class:'dot', style:`background:${color}`}),
+      el('div', {class:'name'}, famLabel(f.family)),
+      el('div', {class:'count'}, `${f.subs.length}`),
+      el('div', {class:'chevron', html:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg>'})
+    );
+    header.addEventListener('click', ()=>{
+      if(openFamilies.has(f.family)) openFamilies.delete(f.family); else openFamilies.add(f.family);
+      renderFilters();
+    });
+    const body = el('div', {class:'family-body'});
+    f.subs.forEach(s=>{
+      const found = findEntry(s.code);
+      const mode = found ? (state.queryGroups[found.gi][found.ei].negate ? 'not' : 'and') : null;
+      const chip = el('div', {class:'code-chip' + (mode ? ' mode-'+mode : ''), style:`--chip-color:${color}`, 'data-code': s.code});
+      const cnt = facetCounts.get(s.code) || 0;
+      chip.append(document.createTextNode((s.sub || famLabel(f.family)) + ' '), el('span', {class:'n'}, `${cnt}`));
+      chip.addEventListener('click', ()=>{ toggleCodeInQuery(s.code); renderAll(); });
+      chip.addEventListener('mouseenter', ()=>highlightCode(s.code, true));
+      chip.addEventListener('mouseleave', ()=>highlightCode(s.code, false));
+      body.appendChild(chip);
+    });
+    group.append(header, body);
+    codeSection.appendChild(group);
+  });
+
+  root.appendChild(codeSection);
+  renderStatsSummary();
+}
+
+function renderQueryBuilder(container){
+  container.innerHTML = '';
+  if(!state.queryGroups.length){
+    container.appendChild(el('div', {class:'query-empty-hint'}, 'No code filters yet — click any code below to add it. Each new code starts its own AND clause; click "AND" between two clauses to turn it into OR.'));
+  } else {
+    state.queryGroups.forEach((group, gi)=>{
+      if(gi>0) container.appendChild(el('div', {
+        class:'query-connector-and',
+        title:'Click to change this AND into OR (merge the two groups)',
+        onclick:()=>{ mergeGroupUp(gi); renderAll(); }
+      }, 'AND'));
+      const groupEl = el('div', {class:'query-group'});
+      group.forEach((entry, ei)=>{
+        if(ei>0) groupEl.appendChild(el('span', {
+          class:'query-connector-or',
+          title:'Click to change this OR into AND (split into two groups)',
+          onclick:()=>{ splitGroupAt(gi, ei); renderAll(); }
+        }, 'OR'));
+        const color = famColor(codeFamilyOf(entry.code));
+        const entryChip = el('span', {class:'query-entry' + (entry.negate ? ' negated' : ''), style:`--chip-color:${color}`});
+        entryChip.append(
+          el('span', {class:'query-entry-label', onclick:()=>{ toggleNegateAt(gi, ei); renderAll(); }}, (entry.negate ? '! ' : '') + labelForCode(entry.code)),
+          el('span', {class:'query-entry-remove', onclick:()=>{ removeEntryAt(gi, ei); renderAll(); }}, '×')
+        );
+        groupEl.appendChild(entryChip);
+      });
+      groupEl.appendChild(el('span', {class:'query-group-remove', onclick:()=>{ removeGroupAt(gi); renderAll(); }}, 'remove group'));
+      container.appendChild(groupEl);
+    });
+  }
+  container.appendChild(el('div', {class:'query-add-group-btn', onclick:()=>{ addNewGroup(); renderAll(); }}, '+ New empty AND group'));
+}
+
+function highlightCode(code, on){
+  document.querySelectorAll(`.turn-code-chip[data-code="${CSS.escape(code)}"]`).forEach(e=>e.classList.toggle('chip-highlight', on));
+}
+
+// ---------------- Stats summary (precision/recall/F1, treating human as reference) ----------------
+function renderStatsSummary(){
+  const body = document.getElementById('statsSummaryBody');
+  if(!body) return;
+  const turns = visibleTurns();
+
+  let totalBoth=0, totalHumanOnly=0, totalLlmOnly=0, matchCount=0;
+  const famStats = new Map(); // family -> {both, humanOnly, llmOnly}
+  turns.forEach(t=>{
+    if(t.match) matchCount++;
+    totalBoth += t.both.length;
+    totalHumanOnly += t.human_only.length;
+    totalLlmOnly += t.llm_only.length;
+    const bump = (fam, key)=>{
+      if(!famStats.has(fam)) famStats.set(fam, {both:0, humanOnly:0, llmOnly:0});
+      famStats.get(fam)[key]++;
+    };
+    t.both.forEach(c=>bump(c.family,'both'));
+    t.human_only.forEach(c=>bump(c.family,'humanOnly'));
+    t.llm_only.forEach(c=>bump(c.family,'llmOnly'));
+  });
+
+  const precision = (totalBoth+totalLlmOnly)>0 ? totalBoth/(totalBoth+totalLlmOnly) : null;
+  const recall = (totalBoth+totalHumanOnly)>0 ? totalBoth/(totalBoth+totalHumanOnly) : null;
+  const f1 = (precision!=null && recall!=null && (precision+recall)>0) ? 2*precision*recall/(precision+recall) : null;
+  const matchRate = turns.length ? (matchCount/turns.length*100) : 0;
+
+  body.innerHTML = '';
+  const overall = el('div', {class:'stats-overall'});
+  overall.append(
+    statBox('Turns', turns.length),
+    statBox('Match rate', matchRate.toFixed(0)+'%'),
+    statBox('Precision', precision!=null ? precision.toFixed(2) : '–'),
+    statBox('Recall', recall!=null ? recall.toFixed(2) : '–'),
+    statBox('F1', f1!=null ? f1.toFixed(2) : '–'),
+    statBox('Codes (both)', totalBoth)
+  );
+  body.appendChild(overall);
+
+  const orderedFams = FAMILIES.map(f=>f.family).filter(f=>famStats.has(f));
+  if(orderedFams.length){
+    const table = el('table', {class:'stats-table'});
+    const thead = el('tr', {}, [el('th',{},'Family'), el('th',{},'F1'), el('th',{},'H-only'), el('th',{},'Both'), el('th',{},'L-only')]);
+    table.appendChild(thead);
+    orderedFams.forEach(fam=>{
+      const fs = famStats.get(fam);
+      const p = (fs.both+fs.llmOnly)>0 ? fs.both/(fs.both+fs.llmOnly) : null;
+      const r = (fs.both+fs.humanOnly)>0 ? fs.both/(fs.both+fs.humanOnly) : null;
+      const f = (p!=null && r!=null && (p+r)>0) ? 2*p*r/(p+r) : null;
+      const tr = el('tr', {}, [
+        el('td', {class:'fam-name'}, famLabel(fam)),
+        el('td', {}, f!=null ? f.toFixed(2) : '–'),
+        el('td', {}, `${fs.humanOnly}`),
+        el('td', {}, `${fs.both}`),
+        el('td', {}, `${fs.llmOnly}`)
+      ]);
+      table.appendChild(tr);
+    });
+    body.appendChild(table);
+  }
+}
+
+function statBox(label, value){
+  return el('div', {class:'stat-box'}, [el('div', {class:'v'}, `${value}`), el('div', {class:'l'}, label)]);
+}
+
+// ---------------- Feed / cards ----------------
+function codeChipEl(c){
+  const color = famColor(c.family);
+  const chip = el('span', {class:'turn-code-chip', 'data-code': c.code});
+  chip.style.setProperty('--chip-bg', hexToRgba(color, 0.13));
+  chip.style.setProperty('--chip-fg', color);
+  chip.style.setProperty('--chip-border', hexToRgba(color, 0.35));
+  chip.append(el('span', {class:'fam'}, famLabel(c.family) + (c.sub? ' · ':'')), c.sub || '');
+  return chip;
+}
+
+function compareColumn(label, list, cls){
+  const col = el('div', {class:'compare-col ' + cls});
+  col.appendChild(el('div', {class:'compare-col-label'}, [label, el('span',{}, `${list.length}`)]));
+  if(list.length){
+    const chips = el('div', {class:'compare-chips'});
+    list.forEach(c=>chips.appendChild(codeChipEl(c)));
+    col.appendChild(chips);
+  } else {
+    col.appendChild(el('div', {class:'compare-empty'}, '—'));
+  }
+  return col;
+}
+
+function renderCard(conv, turnFlags){
+  const card = el('div', {class:'conversation-card'});
+  const header = el('div', {class:'card-header'});
+  header.append(
+    el('div', {class:'tag'}, ['Sample ', el('b',{}, `#${conv.sample_number}`)]),
+    el('div', {class:'coder-badge'}, (conv.coder||'?').replace('Coder_','Coder ')),
+    el('div', {class:'model-badge'}, conv.model),
+    el('div', {class:'tag'}, conv.version)
+  );
+  const matchedCount = conv.turns.filter(t=>t.match).length;
+  const totalCount = conv.turns.length;
+  const chipCls = matchedCount===totalCount ? 'full' : (matchedCount===0 ? 'none' : 'partial');
+  header.appendChild(el('div', {class:'conv-match-chip '+chipCls}, `${matchedCount}/${totalCount} matched`));
+  card.appendChild(header);
+
+  const turnsWrap = el('div', {class:'turns'});
+  conv.turns.forEach((t, i)=>{
+    const matched = turnFlags[i];
+    const anyFilterActive = state.search || state.agreement!=='all' || queryIsActive() ||
+      state.ranges.turn_number.lo>1 || state.ranges.turn_number.hi<4 ||
+      state.ranges.human_count.lo>0 || state.ranges.human_count.hi<9 ||
+      state.ranges.llm_count.lo>0 || state.ranges.llm_count.hi<9;
+    const row = el('div', {class:'turn-row' + (anyFilterActive && !matched ? ' dimmed':'')});
+    const top = el('div', {class:'turn-top'});
+    top.append(
+      el('div', {class:'turn-marker'}, `${t.turn_number}`),
+      el('p', {class:'turn-text'}, t.text),
+      el('div', {class:'turn-match-badge ' + (t.match?'match':'mismatch')}, t.match ? 'match' : 'mismatch')
+    );
+    row.appendChild(top);
+    const grid = el('div', {class:'compare-grid'});
+    grid.append(
+      compareColumn('Human only', t.human_only, 'col-human'),
+      compareColumn('Both', t.both, 'col-both'),
+      compareColumn('LLM only', t.llm_only, 'col-llm')
+    );
+    row.appendChild(grid);
+    turnsWrap.appendChild(row);
+  });
+  card.appendChild(turnsWrap);
+  return card;
+}
+
+function renderFeed(){
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '';
+  const {results} = computeResults();
+  if(!results.length){
+    feed.appendChild(el('div', {class:'feed-empty'}, [el('div', {class:'glyph'}, '∅'), el('div', {}, 'No conversations match these filters.')]));
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  results.forEach(({conv, turnFlags})=> frag.appendChild(renderCard(conv, turnFlags)));
+  feed.appendChild(frag);
+}
+
+function renderStats(){
+  const {results, totalMatchingTurns} = computeResults();
+  const matchedVisible = visibleTurns().filter(t=>t.match).length;
+  const visibleTotal = visibleTurns().length;
+  const rate = visibleTotal ? Math.round(matchedVisible/visibleTotal*100) : 0;
+  const statsBar = document.getElementById('statsBar');
+  statsBar.innerHTML = '';
+  statsBar.append(
+    el('span', {}, [document.createTextNode('conversations '), el('b',{}, `${results.length}`), document.createTextNode(` / ${META.n_conversations}`)]),
+    el('span', {class:'divider'}),
+    el('span', {}, [document.createTextNode('turns '), el('b',{}, `${totalMatchingTurns}`), document.createTextNode(` / ${META.n_turns}`)]),
+    el('span', {class:'divider'}),
+    el('span', {}, [document.createTextNode('match rate '), el('b',{class:'match-rate'}, `${rate}%`)])
+  );
+}
+
+function renderAll(){
+  renderFilters();
+  renderFeed();
+  renderStats();
+}
+
+// ---------------- Mobile drawer ----------------
+document.getElementById('filtersToggleBtn').addEventListener('click', ()=>{
+  document.getElementById('filters').classList.add('open');
+  document.getElementById('filtersScrim').classList.add('open');
+});
+document.getElementById('filtersScrim').addEventListener('click', ()=>{
+  document.getElementById('filters').classList.remove('open');
+  document.getElementById('filtersScrim').classList.remove('open');
+});
+
+renderAll();
+})();
+
+</script>
+</body>
+</html>
