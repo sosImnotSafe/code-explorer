@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "code_explorer.html"
-    }
-  ]
-}
